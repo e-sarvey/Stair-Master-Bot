@@ -71,10 +71,10 @@ void moveOneStair() {
   }
   stopMotors(); // Stop the front motors when the target distance is reached
 
-  //TELL BACK DONE MOVING FORWARD
-
   // Move mass backward
   moveStepper1(MASS_BACK_STEPS);
+
+  //TELL BACK DONE MOVING FORWARD
 
   // WAIT FOR BACK TO FINISH LIFTING AND MOVING FORWARD
 
