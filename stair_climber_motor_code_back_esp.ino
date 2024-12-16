@@ -146,6 +146,9 @@ void setup() {
   // Stop all motors initially
   stopMotors();
 
+  //WAIT FOR MESSAGE FROM CAMERA WITH HEIGHT
+  //STEPS TO RAISE = HEIGHT(MM)*100*1.05
+  
   for (int i = 0; i < 8; i++) {
     moveOneStair();
     delay(500);
