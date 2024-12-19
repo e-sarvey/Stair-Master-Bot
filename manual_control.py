@@ -6,6 +6,8 @@ import paho.mqtt.client as mqtt
 MQTT_BROKER = "10.243.82.33"
 COUNTERWEIGHT_TOPIC = "hardware/stepper/front"
 LIFT_TOPIC = "hardware/stepper/rear"
+FRONT_MOTOR_TOPIC = "hardware/motors/front"
+REAR_MOTOR_TOPIC = "hardware/motors/rear"
 
 # Step values for original group
 STEPS_TO_FRONT = -500 
@@ -13,7 +15,7 @@ STEPS_TO_BACK = -STEPS_TO_FRONT
 STEPS_PER_STAIR = 2400 
 
 # Step values for duplicated group
-FIXED_STEP = 250
+FIXED_STEP = 50
 
 button_width = 120
 button_height = 60
@@ -75,11 +77,22 @@ def lower_fixed_stair():
     client.publish(LIFT_TOPIC, message)
     print(f"Published to {LIFT_TOPIC}: {message}")
 
+# Publish Messages for Motors
+def turn_front_motor_on():
+    message = "on"
+    client.publish(FRONT_MOTOR_TOPIC, message)
+    print(f"Published to {FRONT_MOTOR_TOPIC}: {message}")
+
+def turn_rear_motor_on():
+    message = "on"
+    client.publish(REAR_MOTOR_TOPIC, message)
+    print(f"Published to {REAR_MOTOR_TOPIC}: {message}")
+
 dpg.create_context()
 
-with dpg.window(label="Control Panel", width=600 + x_offset, height=300):
+with dpg.window(label="Control Panel", width=800 + x_offset, height=600):
     # Original Group
-    dpg.add_text("Original Controls")
+
     # Top Button - Lift One Stair
     dpg.add_button(label="Up One Stair", width=button_width, height=button_height, callback=lift_one_stair, pos=[button_height + x_offset, button_height])
     # Left and Right Buttons - Counterweight Controls
@@ -90,6 +103,7 @@ with dpg.window(label="Control Panel", width=600 + x_offset, height=300):
 
     # Duplicated Group (Shifted to the right)
     offset_x = 300  # Space between groups
+
     # Top Button - Lift Fixed Stair
     dpg.add_button(label="Lift +", width=button_width, height=button_height, callback=lift_fixed_stair, pos=[button_height + offset_x + x_offset, button_height])
     # Left and Right Buttons - Counterweight Controls
@@ -98,8 +112,14 @@ with dpg.window(label="Control Panel", width=600 + x_offset, height=300):
     # Bottom Button - Lower Fixed Stair
     dpg.add_button(label="Lift -", width=button_width, height=button_height, callback=lower_fixed_stair, pos=[button_height + offset_x + x_offset, 210])
 
+    # Motor Controls
+
+    motor_offset_y = 300  # Position motors below the other controls
+    dpg.add_button(label="Front Motor On", width=button_width, height=button_height, callback=turn_front_motor_on, pos=[button_height + x_offset, motor_offset_y])
+    dpg.add_button(label="Rear Motor On", width=button_width, height=button_height, callback=turn_rear_motor_on, pos=[button_height + offset_x + x_offset, motor_offset_y])
+
 # Finalizing and Running the Interface
-dpg.create_viewport(title="Control Panel", width=600 + x_offset, height=300)
+dpg.create_viewport(title="Control Panel", width=600 + x_offset, height=500)
 dpg.setup_dearpygui()
 dpg.show_viewport()
 dpg.start_dearpygui()

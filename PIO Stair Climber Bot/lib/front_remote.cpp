@@ -73,54 +73,7 @@ void connectMQTT() {
     LOG_INFO("Subscribed to topic: %s", motors_topic);
     LOG_INFO("Subscribed to topic: %s", stepper_topic);
 }
-// Function to update status
-// void update_status(const char* name, const char* status) {
-//     StaticJsonDocument<256> responseDoc;
-//     responseDoc["name"] = name;
-//     responseDoc["status"] = status;
-//     char responseBuffer[256];
-//     serializeJson(responseDoc, responseBuffer);
-//     client.publish(topic_pub, responseBuffer);
-//     LOG_DEBUG("Published status update: %s", responseBuffer);
-// }
-// void on_message(char* topic, byte* payload, unsigned int length) {
-//     LOG_INFO("Message received on topic: %s", topic);
-//     String message;
-//     for (unsigned int i = 0; i < length; i++) {
-//         message += (char)payload[i];
-//     }
-//     LOG_DEBUG("Full message: %s", message.c_str());
-//     StaticJsonDocument<256> doc;
-//     DeserializationError error = deserializeJson(doc, message);
-//     if (error) {
-//         LOG_ERROR("JSON parsing failed: %s", error.c_str());
-//         return;
-//     }
-//     if (!doc.containsKey("name") || !doc.containsKey("status")) {
-//         LOG_ERROR("Invalid JSON format: Missing fields");
-//         return;
-//     }
-//     // Store the latest received values globally
-//     latest_name = doc["name"].as<String>();
-//     latest_status = doc["status"].as<String>();
-//     LOG_INFO("Latest Name: %s", latest_name.c_str());
-//     LOG_INFO("Latest Status: %s", latest_status.c_str());
-// }
-// Function to control the DC motors (turn on and off based on JSON payload)
-// void controlDCMotors(String payload) {
-//     StaticJsonDocument<200> doc;
-//     DeserializationError error = deserializeJson(doc, payload);
-//     if (error) {
-//         Serial.println("Failed to parse JSON");
-//         return;
-//     }
-//     int motor1_speed = doc["motor1"].as<int>();
-//     int motor2_speed = doc["motor2"].as<int>();
-//     analogWrite(MOTOR1_IN1, max(0, motor1_speed));
-//     analogWrite(MOTOR1_IN2, max(0, -motor1_speed));
-//     analogWrite(MOTOR2_IN1, max(0, motor2_speed));
-//     analogWrite(MOTOR2_IN2, max(0, -motor2_speed));
-// }
+
 // Function to stop motors
 void stopMotors() {
     digitalWrite(MOTOR1_IN1, LOW);
@@ -149,6 +102,40 @@ void moveStepper(String payload) {
     LOG_ERROR("Invalid step count in payload: %s", payload.c_str());
   }
 }
+
+int readLidar() {
+    int16_t distance;
+
+    LOG_INFO("LIDAR TAKING MEASUREMENT");
+
+    // Check if data is ready
+    if (vl53.dataReady()) {
+        // Retrieve the distance measurement
+        distance = vl53.distance();
+        if (distance == -1) {
+            LOG_ERROR("LIDAR measurement failed: Status %d", vl53.vl_status);
+            return 0;
+        }
+
+        LOG_INFO("Distance (mm): %d", distance);
+
+        // Clear the interrupt to prepare for the next reading
+        vl53.clearInterrupt();
+        return distance;
+    } else {
+        LOG_DEBUG("LIDAR data not ready yet");
+        return -1;  // Indicate no new data available
+    }
+}
+
+void moveToStep() {
+    while (readLidar() > 30) {
+            motorOn(MOTOR1_IN1, MOTOR1_IN2, MOTOR2_IN1, MOTOR2_IN2); // Turn on front motors
+            delay(1000);
+            stopMotors(); // Stop the front motors when the target distance is reached
+            delay(1000);
+        }
+}
 // Function to handle incoming MQTT messages
 void callback(char* topic, byte* message, unsigned int length) {
     String payload;
@@ -162,7 +149,7 @@ void callback(char* topic, byte* message, unsigned int length) {
     if (String(topic) == motors_topic) {
         // Turn motors on or off based on command
         if (payload == "on") {
-            motorOn(MOTOR1_IN1, MOTOR1_IN2, MOTOR2_IN1, MOTOR2_IN2);  // Motor on
+            moveToStep();
         } else if (payload == "off") {
             stopMotors();  // Motor off
         }
@@ -196,6 +183,28 @@ void setup() {
     stepper.setMaxSpeed(1000);  // Set maximum speed (steps per second)
     stepper.setAcceleration(500);  // Set acceleration (steps per second^2)
     stopMotors();
+    
+        Wire.begin();
+    if (!vl53.begin(0x29, &Wire)) {  // Default I2C address for VL53L1X
+        LOG_ERROR("Failed to initialize VL53L1X. Status: %d", vl53.vl_status);
+        while (1) delay(10);
+    }
+    LOG_INFO("VL53L1X initialized successfully!");
+
+    LOG_INFO("Sensor ID: 0x%X", vl53.sensorID());
+
+    // Start ranging
+    if (!vl53.startRanging()) {
+        LOG_ERROR("Couldn't start ranging: Status %d", vl53.vl_status);
+        while (1) delay(10);
+    }
+    LOG_INFO("Ranging started");
+
+    // Set the timing budget (Valid values: 15, 20, 33, 50, 100, 200, 500 ms)
+    vl53.setTimingBudget(50);
+    LOG_INFO("Timing budget set to: %d ms", vl53.getTimingBudget());
+    
+
     // WIFI SETUP
     connectWiFi();
     client.setServer(mqtt_broker, mqtt_port);

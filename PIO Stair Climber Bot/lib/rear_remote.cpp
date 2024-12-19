@@ -164,7 +164,10 @@ void callback(char* topic, byte* message, unsigned int length) {
     if (String(topic) == motors_topic) {
         // Turn motors on or off based on command
         if (payload == "on") {
-            motorOn(MOTOR1_IN1, MOTOR1_IN2, MOTOR2_IN1, MOTOR2_IN2);  // Motor on
+            motorOn(MOTOR1_IN1, MOTOR1_IN2, MOTOR2_IN1, MOTOR2_IN2);
+            delay(200);  // Motor on
+            stopMotors();
+            delay(200);
         } else if (payload == "off") {
             stopMotors();  // Motor off
         }
