@@ -28,9 +28,11 @@ const char* ssid = "Tufts_Robot";
 const char* password = "";
 const char* mqtt_broker = "10.243.82.33";
 const int mqtt_port = 1883;
-const char* mqtt_client_id = "front_esp_client";
-const char* motors_topic = "hardware/motors/front";
-const char* stepper_topic = "hardware/stepper/front"; // testing only
+
+
+const char* mqtt_client_id = "rear_esp_client";
+const char* motors_topic = "hardware/motors/rear";
+const char* stepper_topic = "hardware/stepper/rear"; // testing only
 WiFiClient espClient;
 PubSubClient client(espClient);
 // Logging wrapper for funsises
